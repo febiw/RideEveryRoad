@@ -1,30 +1,39 @@
 # RideEveryRoad
 
 [![azure](https://img.shields.io/badge/Azure%20Web%20App-Launch-blue.svg?style=flat)](https://rideeveryroad.azurewebsites.net/)
-[![main](https://github.com/adj97/RideEveryRoad/actions/workflows/main.yml/badge.svg)](https://github.com/adj97/RideEveryRoad/actions/workflows/main.yml)
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 11.2.5.
+View all your Strava activities on a single map. Built with **Next.js 14**, **React 18**, **Tailwind CSS**, and **Google Maps**.
 
-#### Development server
+## Getting started
 
-Run `npm run start` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files. This in turn triggers `npm run config dev && ng serve` to write the api client app secrets in the apropriate dev environment file.
+```bash
+# Install dependencies
+npm install
 
-#### Code scaffolding
+# Create .env.local from the example and fill in your keys
+cp .env.example .env.local
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+# Run dev server
+npm run dev
+```
 
-#### Build
+Open [http://localhost:3000](http://localhost:3000).
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+## Environment variables
 
-#### Running unit tests
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_STRAVA_CLIENT_ID` | Strava API application client ID |
+| `STRAVA_CLIENT_SECRET` | Strava API application client secret (server-side only) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps JavaScript API key |
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+## Build
 
-#### Running end-to-end tests
+```bash
+npm run build
+npm start
+```
 
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
+## Deployment
 
-#### Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+Deployed to Azure Web App via GitHub Actions on push to `main`. Secrets are configured in the repository settings.

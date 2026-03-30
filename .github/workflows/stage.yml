@@ -5,39 +5,25 @@ on:
     types: [opened, synchronize]
 
 env:
-  NODE_VERSION: '12.x'                                   # set this to the node version to use
+  NODE_VERSION: '20.x'
 
 jobs:
-  build: 
-    name: Test and build
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@main
-    - name: Use Node ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-    - name: Install dependencies
-      run: npm ci
-    - name: Write production env file
-      run: npm run config prod
-      env:
-        STRAVA_API_CLIENT_ID: ${{ secrets.STRAVA_API_CLIENT_ID }}
-        STRAVA_API_CLIENT_SECRET: ${{ secrets.STRAVA_API_CLIENT_SECRET }}
-    - name: Build
-      run: npm run build-prod
-    # - name: Test
-    #   run: npm run test:ci
-    - name: Archive build
-      if: success()
-      uses: actions/upload-artifact@v1
-      with:
-        name: dist
-        path: dist
-    # - name: Archive code coverage result
-    #   if: success()
-    #   uses: actions/upload-artifact@v1
-    #   with:
-    #     name: coverage
-    #     path: coverage
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_STRAVA_CLIENT_ID: ${{ secrets.STRAVA_API_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_API_CLIENT_SECRET }}
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
