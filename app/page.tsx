@@ -9,11 +9,15 @@ export default function LandingPage() {
 
   async function startAuthFlow() {
     if (hasCachedRefreshToken()) {
-      await refreshTokens();
-      router.push('/map');
-    } else {
-      window.location.href = getOAuthUrl();
+      try {
+        await refreshTokens();
+        router.push('/map');
+        return;
+      } catch {
+        // Stale or revoked token — fall through to re-auth
+      }
     }
+    window.location.href = getOAuthUrl();
   }
 
   return (
