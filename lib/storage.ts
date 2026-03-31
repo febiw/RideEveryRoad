@@ -1,16 +1,21 @@
-import { encrypt, decrypt } from './crypto';
-
 export function writeStorage(key: string, value: unknown): void {
-  const encrypted = encrypt(JSON.stringify(value));
-  localStorage.setItem(key, encrypted);
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn('localStorage write failed (quota likely exceeded):', key, e);
+  }
 }
 
 export function readStorage<T>(key: string): T | null {
   const raw = localStorage.getItem(key);
   if (!raw) return null;
-  const decrypted = decrypt(raw);
-  if (!decrypted) return null;
-  return JSON.parse(decrypted) as T;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    // Handle legacy encrypted data — clear it and start fresh
+    localStorage.removeItem(key);
+    return null;
+  }
 }
 
 export function deleteStorage(key: string): void {
