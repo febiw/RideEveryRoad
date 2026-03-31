@@ -38,6 +38,7 @@ jobs:
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public
           cp web.config .next/standalone/web.config
+          sed -i "s/parseInt(process.env.PORT, 10) || 3000/process.env.PORT || 3000/" .next/standalone/server.js
       - name: Archive build
         if: success()
         uses: actions/upload-artifact@v4
