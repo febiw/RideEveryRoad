@@ -13,9 +13,6 @@ export default function Footer() {
         <button onClick={() => setStravaInfoOpen(true)} className="bg-transparent border-none cursor-pointer p-0">
           <Image src="/PoweredByStrava.svg" alt="Powered by Strava" width={160} height={40} />
         </button>
-        <a href="https://github.com/adj97/RideEveryRoad" target="_blank" rel="noopener noreferrer">
-          <Image src="/GitHubRepo.svg" alt="GitHub Repository" width={40} height={40} />
-        </a>
       </footer>
       {stravaInfoOpen && <StravaInfoDialog onClose={() => setStravaInfoOpen(false)} />}
     </>
