@@ -80,9 +80,9 @@ export async function refreshTokens(): Promise<void> {
   writeCookie('oauth_refresh_token', data.refresh_token, 365);
 }
 
-async function fetchActivitiesPage(page: number, after?: number): Promise<SummaryActivity[]> {
+async function fetchActivitiesPage(page: number, perPage: number = 200, after?: number): Promise<SummaryActivity[]> {
   const params = new URLSearchParams({
-    per_page: '200',
+    per_page: String(perPage),
     page: String(page),
   });
   if (after) params.set('after', String(after));
@@ -124,4 +124,50 @@ export async function getActivitiesSince(date: Date): Promise<SummaryActivity[]>
   return activities.sort((a, b) =>
     a.start_date > b.start_date ? 1 : -1
   );
+}
+
+/**
+ * Fetches activities page-by-page (newest first) and calls onPage with each batch.
+ * First page fetches 10 (for fast initial render), then 100 at a time.
+ * If cachedIds is provided, stops when it hits an activity already in the cache.
+ * Returns the full array when complete.
+ */
+export async function fetchActivitiesProgressively(
+  onPage: (batch: SummaryActivity[], done: boolean) => void,
+  cachedIds?: Set<number>,
+): Promise<SummaryActivity[]> {
+  const all: SummaryActivity[] = [];
+
+  // First fetch: 10 most recent for fast initial render
+  const first = await fetchActivitiesPage(1, 10);
+  all.push(...first);
+  const firstDone = first.length < 10 || hasOverlap(first, cachedIds);
+  onPage(first, firstDone);
+
+  if (!firstDone) {
+    // Subsequent fetches: 100 at a time, continuing pagination from newest
+    // Page 1 at per_page=100 covers items 1-100, which overlaps our initial 10
+    // so start from page 1 and deduplicate
+    let page = 1;
+    let batch: SummaryActivity[];
+    let hitCache = false;
+
+    do {
+      batch = await fetchActivitiesPage(page, 100);
+      const existingIds = new Set(all.map((a) => a.id));
+      const newItems = batch.filter((a) => !existingIds.has(a.id));
+      all.push(...newItems);
+      hitCache = hasOverlap(batch, cachedIds);
+      const done = batch.length < 100 || hitCache;
+      onPage(newItems, done);
+      page++;
+    } while (batch.length === 100 && !hitCache);
+  }
+
+  return all;
+}
+
+function hasOverlap(batch: SummaryActivity[], ids?: Set<number>): boolean {
+  if (!ids || ids.size === 0) return false;
+  return batch.some((a) => ids.has(a.id));
 }
