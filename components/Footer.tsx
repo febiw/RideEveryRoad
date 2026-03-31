@@ -9,7 +9,7 @@ export default function Footer() {
 
   return (
     <>
-      <footer className="max-w-[960px] mx-auto w-full px-4 py-3 flex items-center gap-4">
+      <footer className="max-w-[960px] mx-auto w-full px-4 flex items-center gap-4">
         <button onClick={() => setStravaInfoOpen(true)} className="bg-transparent border-none cursor-pointer p-0">
           <Image src="/PoweredByStrava.svg" alt="Powered by Strava" width={160} height={40} />
         </button>

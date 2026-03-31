@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, act } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { APIProvider, Map as GoogleMap, useMap } from '@vis.gl/react-google-maps';
 import polyline from '@mapbox/polyline';
 import { fetchActivitiesProgressively, getActivityDetail } from '@/lib/strava';
 import { readStorage, writeStorage, deleteStorage } from '@/lib/storage';
 import { SummaryActivity } from '@/lib/types';
-import { getActivityIcon } from '@/lib/activity-icons';
+import { getActivityIcon, getSportGroup, getSportGroupColor, SPORT_GROUP_CONFIG, SportGroup } from '@/lib/activity-icons';
 
 const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!;
 const DEFAULT_CENTER = { lat: 51.50757, lng: -0.127811 };
@@ -153,11 +153,13 @@ function ActivityPolylines({
   shouldFitBounds,
   onBoundsFit,
   onActivityClick,
+  activeGroup,
 }: {
   activities: SummaryActivity[];
   shouldFitBounds: boolean;
   onBoundsFit: () => void;
   onActivityClick: (activity: SummaryActivity) => void;
+  activeGroup: SportGroup | null;
 }) {
   const map = useMap();
   const drawnRef = useRef(new window.Map<number, google.maps.Polyline>());
@@ -174,6 +176,7 @@ function ActivityPolylines({
     }
   }, [activities]);
 
+  // Draw new polylines (only creates, never removes)
   useEffect(() => {
     if (!map) return;
 
@@ -196,8 +199,8 @@ function ActivityPolylines({
       const line = new google.maps.Polyline({
         path,
         geodesic: true,
-        strokeColor: '#FF0000',
-        strokeOpacity: 0.4,
+        strokeColor: getSportGroupColor(activity.type),
+        strokeOpacity: 0.33333333,
         strokeWeight: 3,
         map,
       });
@@ -211,6 +214,16 @@ function ActivityPolylines({
       drawnRef.current.set(activity.id, line);
     }
   }, [map, activities]);
+
+  // Show/hide polylines based on active group filter
+  useEffect(() => {
+    drawnRef.current.forEach((line, id) => {
+      const activity = activityMapRef.current.get(id);
+      if (!activity) return;
+      const visible = activeGroup === null || getSportGroup(activity.type) === activeGroup;
+      line.setVisible(visible);
+    });
+  }, [activeGroup, activities]);
 
   // Fit bounds once to the most recent activity only
   useEffect(() => {
@@ -237,9 +250,9 @@ function ActivityPolylines({
 function LoadingBar({ count, done }: { count: number; done: boolean }) {
   if (done && count === 0) return null;
   return (
-    <div className="absolute top-0 left-0 right-0 z-10 bg-black/60 text-white text-sm px-4 py-2 flex items-center gap-3">
+    <div className="text-sm px-4 md:py-2 flex items-center justify-center md:justify-start gap-2 text-gray-600">
       {!done && (
-        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        <div className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
       )}
       <span>
         {done
@@ -250,12 +263,63 @@ function LoadingBar({ count, done }: { count: number; done: boolean }) {
   );
 }
 
+function FilterBar({
+  activities,
+  activeGroup,
+  onGroupClick,
+}: {
+  activities: SummaryActivity[];
+  activeGroup: SportGroup | null;
+  onGroupClick: (group: SportGroup | null) => void;
+}) {
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const a of activities) {
+      const g = getSportGroup(a.type);
+      c[g] = (c[g] || 0) + 1;
+    }
+    return c;
+  }, [activities]);
+
+  const groups = (Object.keys(SPORT_GROUP_CONFIG) as SportGroup[]).filter(
+    (g) => (counts[g] || 0) > 0,
+  );
+
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="flex justify-center gap-2 px-2 py-2">
+      {groups.map((g) => {
+        const { icon, color, label } = SPORT_GROUP_CONFIG[g];
+        const isActive = activeGroup === g;
+        return (
+          <button
+            key={g}
+            onClick={() => onGroupClick(isActive ? null : g)}
+            title={label}
+            className="flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium shadow transition-opacity"
+            style={{
+              backgroundColor: color,
+              color: g === 'winter' ? '#fff' : '#fff',
+              opacity: activeGroup === null || isActive ? 1 : 0.35,
+            }}
+          >
+            <span>{icon}</span>
+            <span>{counts[g]}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function MapPage() {
   const [activities, setActivities] = useState<SummaryActivity[]>([]);
   const [loadedCount, setLoadedCount] = useState(0);
   const [done, setDone] = useState(false);
   const [shouldFitBounds, setShouldFitBounds] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<SummaryActivity | null>(null);
+  const [activeGroup, setActiveGroup] = useState<SportGroup | null>(null);
   const allNewRef = useRef<SummaryActivity[]>([]);
   const cachedRef = useRef<SummaryActivity[]>([]);
   const isMobile = useIsMobile();
@@ -320,28 +384,43 @@ export default function MapPage() {
   }, [loadActivities]);
 
   return (
-    <div className="w-full relative" style={{ height: 'calc(100vh - 140px)' }}>
-      <LoadingBar count={loadedCount} done={done} />
-      <APIProvider apiKey={GOOGLE_MAPS_KEY}>
-        <GoogleMap
-          defaultCenter={DEFAULT_CENTER}
-          defaultZoom={13}
-          mapTypeId="roadmap"
-          style={{ width: '100%', height: '100%' }}
-        >
-          <ActivityPolylines
-            activities={activities}
-            shouldFitBounds={shouldFitBounds}
-            onBoundsFit={handleBoundsFit}
-            onActivityClick={handleActivityClick}
-          />
-        </GoogleMap>
-      </APIProvider>
-      {selectedActivity && (
-        isMobile
-          ? <MobilePopup activity={selectedActivity} onClose={() => setSelectedActivity(null)} />
-          : <DesktopSidebar activity={selectedActivity} onClose={() => setSelectedActivity(null)} />
-      )}
+    <div className="w-full flex flex-col" style={{ height: 'calc(100vh - 120px)' }}>
+      {/* Desktop: single row | Mobile: stacked */}
+      <div className="hidden md:flex items-center justify-between px-2 py-1">
+        <LoadingBar count={loadedCount} done={done} />
+        <FilterBar activities={activities} activeGroup={activeGroup} onGroupClick={setActiveGroup} />
+      </div>
+      <div className="md:hidden">
+        <LoadingBar count={loadedCount} done={done} />
+        <FilterBar activities={activities} activeGroup={activeGroup} onGroupClick={setActiveGroup} />
+      </div>
+      <div className="flex-1 relative">
+        <APIProvider apiKey={GOOGLE_MAPS_KEY}>
+          <GoogleMap
+            defaultCenter={DEFAULT_CENTER}
+            defaultZoom={13}
+            mapTypeId="roadmap"
+            style={{ width: '100%', height: '100%' }}
+            mapId="11b72cf62fbd84aa4330dbd1"
+            disableDefaultUI={true}
+            fullscreenControl={true}
+            onClick={() => setSelectedActivity(null)}
+          >
+            <ActivityPolylines
+              activities={activities}
+              shouldFitBounds={shouldFitBounds}
+              onBoundsFit={handleBoundsFit}
+              onActivityClick={handleActivityClick}
+              activeGroup={activeGroup}
+            />
+          </GoogleMap>
+        </APIProvider>
+        {selectedActivity && (
+          isMobile
+            ? <MobilePopup activity={selectedActivity} onClose={() => setSelectedActivity(null)} />
+            : <DesktopSidebar activity={selectedActivity} onClose={() => setSelectedActivity(null)} />
+        )}
+      </div>
     </div>
   );
 }
