@@ -28,3 +28,6 @@ next-env.d.ts
 !.vscode/extensions.json
 .idea
 /src/environments/environment.*
+
+# playwright mcp
+.playwright-mcp/

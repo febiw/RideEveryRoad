@@ -4,6 +4,7 @@ import { writeCookie, readCookie, cookieExists } from './cookies';
 const CLIENT_ID = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID!;
 const TOKEN_URL = 'https://www.strava.com/api/v3/oauth/token';
 const ACTIVITIES_URL = 'https://www.strava.com/api/v3/athlete/activities';
+const ACTIVITY_DETAIL_URL = 'https://www.strava.com/api/v3/activities';
 
 interface TokenResponse {
   access_token: string;
@@ -170,4 +171,13 @@ export async function fetchActivitiesProgressively(
 function hasOverlap(batch: SummaryActivity[], ids?: Set<number>): boolean {
   if (!ids || ids.size === 0) return false;
   return batch.some((a) => ids.has(a.id));
+}
+
+export async function getActivityDetail(id: number): Promise<{ description: string }> {
+  const res = await fetch(`${ACTIVITY_DETAIL_URL}/${id}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Activity detail fetch failed: ${res.status}`);
+  const data = await res.json();
+  return { description: data.description || '' };
 }
