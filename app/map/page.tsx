@@ -401,7 +401,7 @@ export default function MapPage() {
             defaultZoom={13}
             mapTypeId="roadmap"
             style={{ width: '100%', height: '100%' }}
-            //mapId="11b72cf62fbd84aa4330dbd1"
+            mapId="11b72cf62fbd84aa4330dbd1"
             disableDefaultUI={true}
             fullscreenControl={true}
             onClick={() => setSelectedActivity(null)}
