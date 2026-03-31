@@ -1,6 +1,10 @@
 name: Build and deploy to Azure webapp
 
 on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
   push:
     branches:
       - main
@@ -29,15 +33,17 @@ jobs:
           NEXT_PUBLIC_STRAVA_CLIENT_ID: ${{ secrets.STRAVA_API_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_API_CLIENT_SECRET }}
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      - name: Prepare standalone package
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          cp web.config .next/standalone/web.config
       - name: Archive build
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: standalone
-          path: |
-            .next/standalone
-            .next/static
-            public
+          path: .next/standalone
 
   deploy:
     runs-on: ubuntu-latest
@@ -47,9 +53,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: standalone
+          path: deploy
       - name: 'Deploy to Azure WebApp'
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .next/standalone
+          package: deploy
