@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
+    console.error('Missing env vars:', { hasClientId: !!clientId, hasClientSecret: !!clientSecret });
     return NextResponse.json({ error: 'Server misconfigured: missing Strava credentials' }, { status: 500 });
   }
 
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
   const data = await res.json();
 
   if (!res.ok) {
+    console.error('Strava token error:', res.status, data);
     return NextResponse.json(data, { status: res.status });
   }
 
